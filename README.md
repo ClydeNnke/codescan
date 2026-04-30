@@ -8,7 +8,7 @@
 
 **多维度 AI 代码审查 Agent，支持所有主流编程语言**
 
-[🚀 在线 Demo](https://YOUR_USERNAME.github.io/codescan) · [📖 使用说明](#使用方法) · [🛠️ 本地运行](#本地运行)
+[🚀 在线 Demo]([https://YOUR_USERNAME.github.io/codescan](https://clydennke.github.io/codescan/) · [📖 使用说明](#使用方法) · [🛠️ 本地运行](#本地运行)
 
 </div>
 
