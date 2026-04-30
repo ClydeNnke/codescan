@@ -2,9 +2,9 @@
 
 <div align="center">
 
-![CodeScan Banner](https://img.shields.io/badge/CodeScan-AI%20Code%20Review-7c6aff?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyek0xMSAxN3YtNkg5bDMtNCAzIDRoLTJ2NmgtMnoiLz48L3N2Zz4=)
+[![](https://img.shields.io/badge/CODESCAN-AI_CODE_REVIEW-7A5FFF?style=for-the-badge&logo=github)](https://github.com/ClydenNke/codescan)
 [![](https://img.shields.io/badge/LICENSE-MIT-green?style=for-the-badge)](./LICENSE)
-![DeepSeek](https://img.shields.io/badge/Powered%20by-DeepSeek%20API-blue?style=for-the-badge)
+[![](https://img.shields.io/badge/POWERED_BY-DEEPSEEK_API-007BB5?style=for-the-badge)](https://www.deepseek.com/)
 
 **多维度 AI 代码审查 Agent，支持所有主流编程语言**
 
