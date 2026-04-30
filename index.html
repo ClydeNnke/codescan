@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeScan — AI Code Review Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #faf9f7;
+  --bg2: #f4f2ee;
+  --surface: #ffffff;
+  --border: #e8e4de;
+  --border-dark: #d4cfc8;
+  --accent: #cf6c2e;
+  --accent-bg: #fdf0e8;
+  --text: #1a1816;
+  --text-2: #4a4540;
+  --text-3: #9a9390;
+  --green: #2d7a5f;
+  --green-bg: #edf7f3;
+  --red: #c0392b;
+  --red-bg: #fdf0ef;
+  --yellow: #b87c1a;
+  --yellow-bg: #fdf6e8;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 12px rgba(0,0,0,0.08),0 2px 4px rgba(0,0,0,0.04);
+  --radius: 14px;
+  --mono: 'JetBrains Mono',monospace;
+  --sans: 'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --display: 'Outfit','Noto Sans SC',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased}
+.app{max-width:860px;margin:0 auto;padding:32px 24px 80px}
+
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:64px;flex-wrap:wrap;gap:16px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{font-family:var(--display);font-weight:800;font-size:22px;color:var(--text);letter-spacing:-0.5px}
+.logo-mark span{color:var(--accent)}
+.logo-badge{font-family:var(--mono);font-size:9px;font-weight:500;color:var(--accent);background:var(--accent-bg);border:1px solid rgba(207,108,46,.25);border-radius:20px;padding:3px 9px;letter-spacing:.08em}
+.api-row{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:7px 12px;box-shadow:var(--shadow-sm)}
+.api-label{font-size:12px;color:var(--text-3);white-space:nowrap}
+.api-input{background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:12px;width:180px;outline:none}
+.api-input::placeholder{color:var(--border-dark)}
+.api-divider{width:1px;height:14px;background:var(--border)}
+.api-eye{background:none;border:none;cursor:pointer;color:var(--text-3);font-size:13px;padding:0;line-height:1}
+.api-eye:hover{color:var(--text-2)}
+.api-dot{width:7px;height:7px;border-radius:50%;background:var(--border-dark);transition:background .3s;flex-shrink:0}
+.api-dot.ok{background:#34c48a;box-shadow:0 0 0 3px rgba(52,196,138,.15)}
+
+.hero{text-align:center;margin-bottom:48px}
+.hero-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-3);background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;margin-bottom:24px;font-family:var(--mono)}
+.hero-tag-dot{width:5px;height:5px;border-radius:50%;background:var(--green)}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(36px,5.5vw,58px);letter-spacing:-1.5px;line-height:1.2;color:var(--text);margin-bottom:18px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{font-size:16px;color:var(--text-2);line-height:1.75;max-width:560px;margin:0 auto;font-weight:400}
+
+.pipeline{display:flex;align-items:center;justify-content:center;gap:0;margin:0 0 48px;flex-wrap:wrap;row-gap:8px}
+.pipe-step{display:flex;align-items:center;gap:7px;padding:7px 16px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text-3);background:var(--surface);transition:all .25s;white-space:nowrap;box-shadow:var(--shadow-sm)}
+.pipe-step.active{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.pipe-step.done{border-color:rgba(45,122,95,.35);color:var(--green);background:var(--green-bg)}
+.pipe-dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.7}
+.pipe-arrow{color:var(--border-dark);padding:0 6px;font-size:14px}
+
+.editor-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s}
+.editor-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(207,108,46,.1),var(--shadow)}
+.editor-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.editor-dots{display:flex;gap:5px}
+.editor-dot{width:10px;height:10px;border-radius:50%}
+.d1{background:#fc5f57}.d2{background:#fdbc2e}.d3{background:#27c93f}
+.editor-lang{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+#code-input{width:100%;min-height:260px;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.75;padding:20px;resize:vertical;tab-size:2}
+#code-input::placeholder{color:var(--border-dark)}
+
+.controls{display:flex;gap:10px;align-items:center;margin-bottom:48px;flex-wrap:wrap}
+.btn-primary{display:flex;align-items:center;gap:8px;background:var(--text);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-family:var(--display);font-weight:600;font-size:14px;cursor:pointer;transition:all .2s;letter-spacing:-.2px;box-shadow:var(--shadow-sm)}
+.btn-primary:hover{background:var(--accent);transform:translateY(-1px);box-shadow:0 6px 20px rgba(207,108,46,.3)}
+.btn-primary:active{transform:none}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-primary.loading .spinner{display:block}
+.btn-primary.loading .btn-icon{display:none}
+.btn-ghost{background:transparent;border:1px solid var(--border);border-radius:10px;padding:11px 18px;color:var(--text-2);font-family:var(--sans);font-size:13px;cursor:pointer;transition:all .2s}
+.btn-ghost:hover{border-color:var(--border-dark);background:var(--bg2)}
+.cost-hint{font-size:12px;color:var(--text-3);margin-left:4px}
+
+#thinking{display:none;padding:40px;text-align:center}
+.think-steps{display:flex;flex-direction:column;gap:12px;align-items:center}
+.think-step{font-size:13px;color:var(--border-dark);display:flex;align-items:center;gap:8px;transition:color .3s}
+.think-step.current{color:var(--accent);font-weight:500}
+.think-step.done{color:var(--green)}
+.think-icon{font-size:14px}
+
+#results{display:none;animation:fadeUp .35s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px}
+.results-title{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:-.3px;color:var(--text)}
+.results-sub{font-size:13px;color:var(--text-3);margin-top:2px}
+.score-widget{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:var(--shadow-sm)}
+.score-ring-wrap{position:relative;width:52px;height:52px;flex-shrink:0}
+.score-ring-wrap svg{transform:rotate(-90deg)}
+.score-ring-bg{fill:none;stroke:var(--bg2);stroke-width:4}
+.score-ring-fill{fill:none;stroke-width:4;stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)}
+.score-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:15px;color:var(--text)}
+.score-info{line-height:1.4}
+.score-grade-label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono)}
+.score-grade{font-family:var(--display);font-weight:800;font-size:22px;color:var(--text);letter-spacing:-.5px}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+@media(max-width:620px){.cards{grid-template-columns:1fr}}
+.dim-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);animation:fadeUp .35s ease both;transition:box-shadow .2s,border-color .2s}
+.dim-card:hover{border-color:var(--border-dark);box-shadow:var(--shadow)}
+.dim-card:nth-child(1){animation-delay:.05s}.dim-card:nth-child(2){animation-delay:.1s}.dim-card:nth-child(3){animation-delay:.15s}
+.dim-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.dim-icon-title{display:flex;align-items:center;gap:8px}
+.dim-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.dim-name{font-family:var(--display);font-weight:600;font-size:14px;color:var(--text)}
+.dim-score{font-family:var(--mono);font-size:13px;font-weight:500;padding:3px 10px;border-radius:20px}
+.card-security .dim-icon{background:var(--red-bg)}
+.card-security .dim-score{background:var(--red-bg);color:var(--red)}
+.card-performance .dim-icon{background:var(--yellow-bg)}
+.card-performance .dim-score{background:var(--yellow-bg);color:var(--yellow)}
+.card-readability .dim-icon{background:#eef2ff}
+.card-readability .dim-score{background:#eef2ff;color:#4f4cdb}
+.dim-summary{font-size:12.5px;color:var(--text-2);line-height:1.65;margin-bottom:12px}
+.dim-issues{display:flex;flex-direction:column;gap:5px}
+.issue-item{display:flex;gap:7px;align-items:flex-start;font-size:12px;line-height:1.55;padding:7px 10px;border-radius:6px}
+.issue-high{background:var(--red-bg)}.issue-medium{background:var(--yellow-bg)}.issue-low{background:var(--green-bg)}
+.issue-icon{flex-shrink:0;font-size:11px;margin-top:1px}
+.issue-text{color:var(--text-2)}
+
+.suggestions-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;margin-bottom:16px;box-shadow:var(--shadow-sm);animation:fadeUp .35s .2s ease both}
+.block-title{font-family:var(--display);font-weight:700;font-size:15px;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.suggestion-list{display:flex;flex-direction:column;gap:8px}
+.suggestion-item{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;background:var(--bg2);border-radius:8px;font-size:13.5px;line-height:1.65;color:var(--text-2);border:1px solid var(--border)}
+.sug-num{font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--accent-bg);border-radius:4px;padding:2px 7px;flex-shrink:0;margin-top:2px;font-weight:500}
+
+.chat-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);animation:fadeUp .35s .25s ease both;margin-bottom:16px}
+.chat-header{display:flex;align-items:center;gap:9px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.chat-title{font-family:var(--display);font-weight:600;font-size:14px;color:var(--text);flex:1}
+.chat-online{font-family:var(--mono);font-size:10px;color:var(--green);background:var(--green-bg);border:1px solid rgba(45,122,95,.2);padding:2px 8px;border-radius:20px}
+.chat-messages{padding:18px;min-height:70px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.chat-msg{display:flex;gap:9px;animation:fadeUp .25s ease}
+.msg-avatar{width:26px;height:26px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;margin-top:2px}
+.msg-user .msg-avatar{background:var(--bg2);border:1px solid var(--border)}
+.msg-ai .msg-avatar{background:var(--accent-bg);border:1px solid rgba(207,108,46,.2)}
+.msg-bubble{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13.5px;line-height:1.65;color:var(--text-2);max-width:calc(100% - 38px)}
+.msg-user .msg-bubble{background:var(--text);border-color:var(--text);color:#fff;border-radius:10px 10px 3px 10px}
+.chat-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--border);background:var(--bg2)}
+#chat-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:13.5px;padding:9px 13px;outline:none;transition:border-color .2s,box-shadow .2s}
+#chat-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(207,108,46,.1)}
+#chat-input::placeholder{color:var(--border-dark)}
+.btn-send{background:var(--text);border:none;border-radius:8px;color:#fff;width:38px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.btn-send:hover{background:var(--accent)}
+.btn-send:disabled{opacity:.35;cursor:not-allowed}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+footer{text-align:center;margin-top:64px;font-size:12px;color:var(--text-3);line-height:2.2;font-family:var(--mono)}
+footer a{color:var(--text-3);text-decoration:none}
+footer a:hover{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-mark">Code<span>Scan</span></div>
+      <div class="logo-badge">AI AGENT</div>
+    </div>
+    <div class="api-row">
+      <span class="api-label">DeepSeek Key</span>
+      <div class="api-divider"></div>
+      <input class="api-input" id="api-key" type="password" placeholder="sk-xxxxxxxxxxxxxxxx" spellcheck="false" autocomplete="off">
+      <button class="api-eye" onclick="toggleKey()">👁</button>
+      <div class="api-divider"></div>
+      <div class="api-dot" id="api-dot"></div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="hero-tag"><div class="hero-tag-dot"></div>Two-stage Agent Pipeline</div>
+    <h1>代码质量<em>审查</em><br>交给 AI Agent</h1>
+    <p>粘入任意代码，Agent 自动识别语言，从安全性、性能、可读性三个维度深度分析，输出结构化报告并支持多轮追问。</p>
+  </div>
+
+  <div class="pipeline" id="pipeline">
+    <div class="pipe-step" id="step-detect"><div class="pipe-dot"></div>语言识别</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step" id="step-analyze"><div class="pipe-dot"></div>多维分析</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step" id="step-report"><div class="pipe-dot"></div>生成报告</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step" id="step-chat"><div class="pipe-dot"></div>追问模式</div>
+  </div>
+
+  <div class="editor-wrap">
+    <div class="editor-toolbar">
+      <div class="editor-dots">
+        <div class="editor-dot d1"></div>
+        <div class="editor-dot d2"></div>
+        <div class="editor-dot d3"></div>
+      </div>
+      <span class="editor-lang" id="editor-lang-label">paste your code · 支持所有主流语言</span>
+      <span></span>
+    </div>
+    <textarea id="code-input" spellcheck="false" placeholder="// Paste your code here&#10;// 支持 Python · JavaScript · Java · Kotlin · Go · C/C++ · PHP · Rust 等"></textarea>
+  </div>
+
+  <div class="controls">
+    <button class="btn-primary" id="analyze-btn" onclick="startAnalysis()">
+      <span class="btn-icon">⚡</span>
+      <div class="spinner"></div>
+      开始审查
+    </button>
+    <button class="btn-ghost" onclick="clearAll()">清空</button>
+    <span class="cost-hint">每次约 ¥0.01</span>
+  </div>
+
+  <div id="thinking">
+    <div class="think-steps">
+      <div class="think-step" id="think-1"><span class="think-icon">○</span>Step 1 — 识别语言与代码结构</div>
+      <div class="think-step" id="think-2"><span class="think-icon">○</span>Step 2 — 安全 · 性能 · 可读性分析中</div>
+    </div>
+  </div>
+
+  <div id="results">
+    <div class="results-header">
+      <div>
+        <div class="results-title" id="results-title">分析报告</div>
+        <div class="results-sub" id="results-sub">—</div>
+      </div>
+      <div class="score-widget">
+        <div class="score-ring-wrap">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle class="score-ring-bg" cx="26" cy="26" r="20"/>
+            <circle class="score-ring-fill" id="score-ring" cx="26" cy="26" r="20" stroke-dasharray="125.7" stroke-dashoffset="125.7"/>
+          </svg>
+          <div class="score-num" id="score-num">—</div>
+        </div>
+        <div class="score-info">
+          <div class="score-grade-label">综合评分</div>
+          <div class="score-grade" id="score-grade">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="dim-card card-security">
+        <div class="dim-top">
+          <div class="dim-icon-title"><div class="dim-icon">🔒</div><div class="dim-name">安全性</div></div>
+          <div class="dim-score" id="sec-score">—</div>
+        </div>
+        <div class="dim-summary" id="sec-summary"></div>
+        <div class="dim-issues" id="sec-issues"></div>
+      </div>
+      <div class="dim-card card-performance">
+        <div class="dim-top">
+          <div class="dim-icon-title"><div class="dim-icon">⚡</div><div class="dim-name">性能</div></div>
+          <div class="dim-score" id="perf-score">—</div>
+        </div>
+        <div class="dim-summary" id="perf-summary"></div>
+        <div class="dim-issues" id="perf-issues"></div>
+      </div>
+      <div class="dim-card card-readability">
+        <div class="dim-top">
+          <div class="dim-icon-title"><div class="dim-icon">📖</div><div class="dim-name">可读性</div></div>
+          <div class="dim-score" id="read-score">—</div>
+        </div>
+        <div class="dim-summary" id="read-summary"></div>
+        <div class="dim-issues" id="read-issues"></div>
+      </div>
+    </div>
+
+    <div class="suggestions-block">
+      <div class="block-title">💡 优化建议</div>
+      <div class="suggestion-list" id="suggestions"></div>
+    </div>
+
+    <div class="chat-block">
+      <div class="chat-header">
+        <span>💬</span>
+        <div class="chat-title">追问 Agent</div>
+        <div class="chat-online">在线</div>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-msg msg-ai">
+          <div class="msg-avatar">✦</div>
+          <div class="msg-bubble">报告已生成，你可以继续追问，例如：「帮我修复安全漏洞」「重写性能最差的函数」「这段代码有内存泄漏吗？」</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input id="chat-input" type="text" placeholder="追问 Agent…" onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="btn-send" id="send-btn" onclick="sendChat()">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    CodeScan · AI Code Review Agent &nbsp;·&nbsp;
+    Powered by <a href="https://platform.deepseek.com" target="_blank">DeepSeek API</a>
+    &nbsp;·&nbsp; API Key 仅本地使用，不上传任何服务器
+  </footer>
+</div>
+
+<script>
+const API_BASE='https://api.deepseek.com/v1/chat/completions';
+let currentCode='',currentLang='',chatHistory=[];
+
+const keyInput=document.getElementById('api-key');
+const dot=document.getElementById('api-dot');
+keyInput.addEventListener('input',()=>{
+  const k=keyInput.value.trim();
+  if(k.startsWith('sk-')&&k.length>20){dot.className='api-dot ok';localStorage.setItem('ds_key',k);}
+  else dot.className='api-dot';
+});
+const saved=localStorage.getItem('ds_key');
+if(saved){keyInput.value=saved;dot.className='api-dot ok';}
+function toggleKey(){keyInput.type=keyInput.type==='password'?'text':'password';}
+
+function guessLang(c){
+  if(/fun |val /.test(c))return'Kotlin';
+  if(/def |import |print\(|self/.test(c))return'Python';
+  if(/public class|System\.out/.test(c))return'Java';
+  if(/func .*\(|:=/.test(c))return'Go';
+  if(/#include|cout <<|printf\(/.test(c))return'C/C++';
+  if(/<\?php|echo /.test(c))return'PHP';
+  if(/fn .*->|let mut/.test(c))return'Rust';
+  return'JavaScript';
+}
+
+async function startAnalysis(){
+  const key=keyInput.value.trim();
+  if(!key.startsWith('sk-')){alert('请先填入 DeepSeek API Key（右上角）');return;}
+  const code=document.getElementById('code-input').value.trim();
+  if(code.length<10){alert('请先粘入代码');return;}
+  currentCode=code;
+  const btn=document.getElementById('analyze-btn');
+  btn.disabled=true;btn.classList.add('loading');
+  document.getElementById('results').style.display='none';
+  document.getElementById('thinking').style.display='block';
+  ['step-detect','step-analyze','step-report','step-chat'].forEach(id=>setPipe(id,''));
+  try{
+    setThink(1);setPipe('step-detect','active');
+    const lang=guessLang(code);
+    document.getElementById('editor-lang-label').textContent=lang;
+    const r1=await callAPI(key,[{role:'user',content:`分析以下代码，仅返回JSON（无markdown）：\n{"language":"","type":"","lines":0,"complexity":"low|medium|high","brief":"功能描述20字内"}\n代码：\`\`\`\n${code.slice(0,3000)}\n\`\`\``}]);
+    let meta={};try{meta=JSON.parse(cleanJSON(r1));}catch{meta={language:lang,brief:'代码片段',complexity:'medium'};}
+    currentLang=meta.language||lang;setPipe('step-detect','done');
+    setThink(2);setPipe('step-analyze','active');
+    const r2=await callAPI(key,[{role:'user',content:`你是专业代码审查Agent。代码简介：${meta.brief}（${currentLang}），复杂度：${meta.complexity}。\n仅返回JSON（无markdown）：\n{"overall":0-100,"security":{"score":0-100,"summary":"","issues":[{"level":"high|medium|low","text":""}]},"performance":{"score":0-100,"summary":"","issues":[{"level":"high|medium|low","text":""}]},"readability":{"score":0-100,"summary":"","issues":[{"level":"high|medium|low","text":""}]},"suggestions":["","",""]}\n每维度issues最多3条，suggestions最多3条，全部中文。\n代码：\`\`\`${currentLang}\n${code.slice(0,4000)}\n\`\`\``}]);
+    setPipe('step-analyze','done');setPipe('step-report','active');
+    let report={};try{report=JSON.parse(cleanJSON(r2));}catch(e){throw new Error('解析结果失败，请重试');}
+    chatHistory=[{role:'system',content:`你是代码审查助手。已分析${currentLang}代码。评分:${report.overall}。安全:${report.security?.summary}。性能:${report.performance?.summary}。可读性:${report.readability?.summary}。\n代码:\`\`\`${currentLang}\n${code.slice(0,3000)}\n\`\`\`\n用中文简洁回答追问。`}];
+    render(report,meta);setPipe('step-report','done');setPipe('step-chat','done');
+  }catch(err){document.getElementById('thinking').style.display='none';alert('出错：'+err.message);}
+  finally{btn.disabled=false;btn.classList.remove('loading');}
+}
+
+function render(r,meta){
+  document.getElementById('thinking').style.display='none';
+  document.getElementById('results').style.display='block';
+  document.getElementById('results-title').textContent=currentLang+' 分析报告';
+  document.getElementById('results-sub').textContent=(meta.brief||'')+' · '+(meta.lines||'—')+' 行 · 复杂度 '+(meta.complexity||'—');
+  const score=r.overall||70,c=125.7;
+  const ring=document.getElementById('score-ring');
+  const color=score>=80?'#2d7a5f':score>=60?'#b87c1a':'#c0392b';
+  ring.style.stroke=color;ring.style.strokeDashoffset=c;
+  setTimeout(()=>{ring.style.strokeDashoffset=c-(score/100)*c;},80);
+  document.getElementById('score-num').textContent=score;
+  document.getElementById('score-grade').textContent=score>=90?'S':score>=80?'A':score>=70?'B':score>=60?'C':'D';
+  document.getElementById('score-grade').style.color=color;
+  renderDim('sec',r.security);renderDim('perf',r.performance);renderDim('read',r.readability);
+  const sug=document.getElementById('suggestions');
+  sug.innerHTML=(r.suggestions||[]).map((s,i)=>`<div class="suggestion-item"><span class="sug-num">${String(i+1).padStart(2,'0')}</span><span>${s}</span></div>`).join('');
+  document.getElementById('chat-messages').innerHTML=`<div class="chat-msg msg-ai"><div class="msg-avatar">✦</div><div class="msg-bubble">报告已生成！可以追问，例如：「帮我修复安全漏洞」「重写性能最差的函数」</div></div>`;
+}
+
+function renderDim(p,d){
+  if(!d)return;
+  document.getElementById(p+'-score').textContent=d.score+' / 100';
+  document.getElementById(p+'-summary').textContent=d.summary||'';
+  const icons={high:'🔴',medium:'🟡',low:'🟢'};
+  document.getElementById(p+'-issues').innerHTML=(d.issues||[]).map(i=>`<div class="issue-item issue-${i.level}"><span class="issue-icon">${icons[i.level]||'●'}</span><span class="issue-text">${i.text}</span></div>`).join('');
+}
+
+async function sendChat(){
+  const key=keyInput.value.trim();
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();
+  if(!msg||!key)return;
+  const el=document.getElementById('chat-messages');
+  el.innerHTML+=`<div class="chat-msg msg-user"><div class="msg-avatar">你</div><div class="msg-bubble">${esc(msg)}</div></div>`;
+  input.value='';document.getElementById('send-btn').disabled=true;
+  const t=document.createElement('div');t.className='chat-msg msg-ai';
+  t.innerHTML=`<div class="msg-avatar">✦</div><div class="msg-bubble" style="color:var(--text-3)">思考中…</div>`;
+  el.appendChild(t);el.scrollTop=el.scrollHeight;
+  chatHistory.push({role:'user',content:msg});
+  try{
+    const reply=await callAPI(key,chatHistory);
+    chatHistory.push({role:'assistant',content:reply});
+    t.querySelector('.msg-bubble').style.color='';
+    t.querySelector('.msg-bubble').textContent=reply;
+  }catch(e){t.querySelector('.msg-bubble').textContent='出错：'+e.message;}
+  finally{document.getElementById('send-btn').disabled=false;el.scrollTop=el.scrollHeight;}
+}
+
+async function callAPI(key,messages){
+  const res=await fetch(API_BASE,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify({model:'deepseek-chat',max_tokens:2000,temperature:0.3,messages})});
+  if(!res.ok){const e=await res.json().catch(()=>{});throw new Error(e?.error?.message||`HTTP ${res.status}`);}
+  const data=await res.json();
+  return data.choices?.[0]?.message?.content||'';
+}
+function cleanJSON(t){return t.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function clearAll(){
+  document.getElementById('code-input').value='';
+  document.getElementById('results').style.display='none';
+  document.getElementById('thinking').style.display='none';
+  document.getElementById('editor-lang-label').textContent='paste your code · 支持所有主流语言';
+  ['step-detect','step-analyze','step-report','step-chat'].forEach(id=>setPipe(id,''));
+}
+function setPipe(id,state){document.getElementById(id).className='pipe-step'+(state?' '+state:'');}
+function setThink(n){
+  [1,2].forEach(i=>{
+    const el=document.getElementById('think-'+i);
+    const s=i<n?'done':i===n?'current':'';
+    el.className='think-step'+(s?' '+s:'');
+    el.querySelector('.think-icon').textContent=s==='done'?'✓':s==='current'?'◉':'○';
+  });
+}
+</script>
+</body>
+</html>
